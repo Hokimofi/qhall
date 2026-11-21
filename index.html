@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Qhall</title>
+  <meta name="description" content="Calendário, escalas, reuniões, músicas e materiais dos ministérios da igreja.">
+  <meta name="theme-color" content="#0D172B">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Qhall">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icone-180.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23060b16'/%3E%3Crect x='44' y='16' width='12' height='68' rx='5' fill='%23dbeafe'/%3E%3Crect x='26' y='33' width='48' height='12' rx='5' fill='%23dbeafe'/%3E%3C/svg%3E">
+  <!-- Fontes: Bricolage Grotesque (títulos) e Inter (textos e controles). Sem internet, usa as fontes do sistema. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <!-- Luz fluida azul que se move devagar atrás de todas as telas (desenhada pelo app.js) -->
+  <div class="fundo-animado" aria-hidden="true"><canvas class="fundo-luz"></canvas></div>
+
+  <header class="topo" id="topo">
+    <a class="marca" href="#/calendario" id="marca" aria-label="Qhall, ir para o calendário">
+      <svg class="marca-cruz" viewBox="0 0 44 60" aria-hidden="true">
+        <defs>
+          <linearGradient id="qhall-cruz-topo" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="44" y2="60">
+            <stop offset="0" class="cruz-cor-a"/>
+            <stop offset="1" class="cruz-cor-b"/>
+          </linearGradient>
+        </defs>
+        <rect x="17" y="0" width="10" height="60" rx="4" fill="url(#qhall-cruz-topo)"/>
+        <rect x="2" y="15" width="40" height="10" rx="4" fill="url(#qhall-cruz-topo)"/>
+      </svg>
+      <span class="marca-nome">Qhall</span>
+    </a>
+
+    <div class="usuario" id="usuario" hidden>
+      <button class="usuario-botao" id="btn-usuario" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-usuario">
+        <span class="avatar" id="avatar" aria-hidden="true">?</span>
+        <span class="usuario-nome" id="usuario-nome"></span>
+        <span class="usuario-seta" aria-hidden="true">▾</span>
+      </button>
+      <div class="usuario-menu" id="menu-usuario" role="menu" hidden>
+        <p class="usuario-info" id="quem"></p>
+        <button type="button" role="menuitem" id="btn-senha">Alterar senha</button>
+        <button type="button" role="menuitem" id="btn-sair">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navegação: barra lateral fixa no PC, menu inferior no celular. Mesma ordem para todos. -->
+  <nav class="abas" id="abas" hidden aria-label="Navegação principal">
+    <a href="#/calendario" data-rota="calendario">
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+      <span class="aba-nome">Calendário</span>
+    </a>
+    <a href="#/reunioes" data-rota="reunioes">
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V3h6v1.5M9 12.5l2 2 4-4"/></svg></span>
+      <span class="aba-nome">Reuniões</span>
+    </a>
+    <!-- Líder: "Minha equipe". Admin: "Ministérios". O app.js ajusta o link e o nome. -->
+    <a href="#/ministerios" data-rota="equipes" id="aba-equipe">
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></span>
+      <span class="aba-nome">Ministérios</span>
+    </a>
+    <a href="#/membros" data-rota="membros" id="aba-membros" hidden>
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.8" cy="9.5" r="2.4"/><path d="M15.6 14.6c2.5-.4 4.4 1.2 4.9 4.4"/></svg></span>
+      <span class="aba-nome">Membros</span>
+    </a>
+    <a href="#/admin" data-rota="admin" id="aba-admin" hidden>
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+      <span class="aba-nome"><span class="nome-longo">Administração</span><span class="nome-curto">Admin</span></span>
+    </a>
+    <a href="#/historico" data-rota="historico">
+      <span class="aba-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg></span>
+      <span class="aba-nome">Histórico</span>
+    </a>
+  </nav>
+
+  <main id="app" class="app" aria-live="polite">
+    <p class="carregando">Carregando…</p>
+  </main>
+
+  <!-- Abertura: a marca aparece no centro e se encaixa no canto superior esquerdo -->
+  <div class="abertura" id="abertura" aria-hidden="true">
+    <div class="abertura-marca" id="abertura-marca">
+      <svg class="marca-cruz" viewBox="0 0 44 60">
+        <defs>
+          <linearGradient id="qhall-cruz-abertura" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="44" y2="60">
+            <stop offset="0" class="cruz-cor-a"/>
+            <stop offset="1" class="cruz-cor-b"/>
+          </linearGradient>
+        </defs>
+        <rect x="17" y="0" width="10" height="60" rx="4" fill="url(#qhall-cruz-abertura)"/>
+        <rect x="2" y="15" width="40" height="10" rx="4" fill="url(#qhall-cruz-abertura)"/>
+      </svg>
+      <span class="marca-nome">Qhall</span>
+    </div>
+  </div>
+
+  <noscript><p style="padding:16px">Este app precisa de JavaScript ligado para funcionar.</p></noscript>
+  <div class="avisos" id="avisos" aria-live="assertive"></div>
+
+  <!-- Bibliotecas por CDN (versões fixas). Se Motion falhar, o app funciona sem animação. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/motion@14.7.1/dist/motion.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

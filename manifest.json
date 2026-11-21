@@ -1,0 +1,26 @@
+{
+  "name": "Qhall",
+  "short_name": "Qhall",
+  "description": "Calendário, escalas, músicas e materiais dos ministérios da igreja.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060b16",
+  "theme_color": "#0D172B",
+  "icons": [
+    {
+      "src": "icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
