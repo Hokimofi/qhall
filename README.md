@@ -24,10 +24,10 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 - **Banco:** versão 8.2 (migrações v8, v8.1 e v8.2 aplicadas sobre a v7, preservando os dados e as permissões de escala). RLS em todas as tabelas, Realtime ligado.
 - **Storage:** pasta privada `materiais` (só áudio e vídeo, até 50 MB por arquivo; o plano gratuito tem 1 GB no total).
 - **Contas atuais:** 1 admin (Davi) e 2 líderes de teste (Audiovisual e Música/Louvor). Faltam as contas de ADM da mãe e do pai do Davi, do Elan e do Fabrício (seção 8). Os dados de teste foram apagados.
-- **Endereços de login liberados:** `http://localhost:8124` e `http://127.0.0.1:8124` (testes no computador).
+- **Endereços de login liberados:** `https://hokimofi.github.io/qhall/` (site publicado), `http://localhost:8124` e `http://127.0.0.1:8124` (testes no computador).
 - **Site publicado (GitHub Pages):** <https://hokimofi.github.io/qhall/>, a partir do repositório `Hokimofi/qhall` (branch `main`, pasta raiz). Para atualizar: `git push` na branch `main`; o site muda em cerca de 1 minuto.
 - **Instalar no celular:** abra o endereço no Chrome (Android: ⋮ › Adicionar à tela inicial) ou no Safari (iPhone: Compartilhar › Adicionar à Tela de Início). Não há arquivo para baixar.
-- **Falta no Supabase:** em **Authentication › URL Configuration**, colocar `https://hokimofi.github.io/qhall/` como **Site URL** e adicionar `https://hokimofi.github.io/qhall/**` nas Redirect URLs (seção 4). Sem isso o login funciona, mas o link de "Esqueci a senha" não volta para o site publicado.
+- **Supabase liberado para o site (21/11/2026):** em **Authentication › URL Configuration**, o **Site URL** é `https://hokimofi.github.io/qhall/` e `https://hokimofi.github.io/qhall/**` está nas Redirect URLs, então o link de "Esqueci a senha" volta para o site publicado.
 - A senha do banco foi gerada pelo Supabase e não é usada pelo app. Se precisar dela, redefina em **Project Settings › Database**.
 
 ## Como funciona o acesso
