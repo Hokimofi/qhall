@@ -154,7 +154,10 @@ create table public.reunioes (
   local      text,
   pauta      text,
   criado_por uuid default auth.uid() references auth.users (id) on delete set null,
-  criado_em  timestamptz not null default now()
+  criado_em  timestamptz not null default now(),
+  -- reunião realizada (só o admin marca)
+  concluido_em  timestamptz,
+  concluido_por uuid references auth.users (id) on delete set null
 );
 
 create table public.respostas_reuniao (

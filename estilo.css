@@ -699,6 +699,12 @@ details.anteriores > summary { font-family: var(--fonte-titulo); font-size: 1.05
 .lista-lideres .acoes-lider { flex: none; flex-wrap: nowrap; }
 @media (max-width: 480px) { .lista-lideres li { flex-wrap: wrap; } .lista-lideres .acoes-lider { width: 100%; justify-content: flex-end; } }
 
+/* Botão "Marcar como realizado/realizada" (evento e reunião) */
+.btn-realizado { display: inline-flex; align-items: center; gap: .4rem; }
+.btn-realizado .status-dot { width: 8px; height: 8px; }
+.acoes-reuniao { display: flex; justify-content: flex-end; margin-top: .8rem; }
+.reuniao-card .concluido-selo { margin-top: .4rem; }
+
 /* Menu inferior com seis itens (admin) no celular */
 @media (max-width: 899px) {
   .abas a { font-size: .64rem; }

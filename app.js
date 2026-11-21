@@ -555,6 +555,7 @@ async function carregarPerfilAgora(sessao) {
   $('#aba-admin').hidden = !eAdmin();
   $('#btn-senha').hidden = !eAdmin(); // líder não troca a senha: fala com o administrador
   $('#aba-membros').hidden = !eAdmin();
+  $('#aba-historico').hidden = !eAdmin(); // histórico de músicas: só o admin (os ministérios veem as músicas dentro do evento)
   // Admin: "Equipes" (todas). Líder: "Minha equipe" (atalho direto para a área dele).
   const abaEquipe = $('#aba-equipe');
   const rotuloEquipe = eAdmin() ? 'Ministérios' : 'Minha equipe';
@@ -818,17 +819,24 @@ async function telaCalendario(ctx) {
       const dt = new Date(ano, mes, d);
       const iso = isoLocal(dt);
       const evs = porDia.get(iso) || [];
+      // vermelha = evento avulso pendente; verde = há evento realizado e nenhum avulso pendente
+      // (vale também para datas semanais realizadas); roxa = data semanal ainda pendente
       const normais = evs.filter((e) => !ehSemanal(e));
       const pendentes = normais.filter((e) => !e.concluido_em).length;
-      const semanais = evs.length - normais.length;
-      const nReu = (reuPorDia.get(iso) || []).length;
+      const semanaisPend = evs.filter((e) => ehSemanal(e) && !e.concluido_em).length;
+      const reus = reuPorDia.get(iso) || [];
+      const nReu = reus.filter((r) => !r.concluido_em).length; // reunião ainda não realizada: amarela
+      const realizados = evs.filter((e) => e.concluido_em).length + reus.filter((r) => r.concluido_em).length;
       const dots = [];
       const rotulo = [];
-      if (normais.length) {
-        dots.push(pendentes ? 'pendente' : 'concluido');
-        rotulo.push(pendentes ? `${normais.length} evento(s), ${pendentes} pendente(s)` : `${normais.length} evento(s) concluído(s)`);
+      if (pendentes) {
+        dots.push('pendente');
+        rotulo.push(`${normais.length} evento(s), ${pendentes} pendente(s)`);
+      } else if (realizados) {
+        dots.push('concluido');
+        rotulo.push(`${realizados} realizado(s)`);
       }
-      if (semanais) { dots.push('recorrente'); rotulo.push(`${semanais} evento(s) semanal(is)`); }
+      if (semanaisPend) { dots.push('recorrente'); rotulo.push(`${semanaisPend} evento(s) semanal(is) pendente(s)`); }
       if (nReu) { dots.push('reuniao'); rotulo.push(`${nReu} reunião(ões)`); }
       const fds = dt.getDay() === 0 || dt.getDay() === 6;
       const classes = ['cal-dia', fds && 'fds', iso === hojeIso && 'hoje', iso === estado.diaSelecionado && 'selecionado'].filter(Boolean).join(' ');
@@ -843,9 +851,10 @@ async function telaCalendario(ctx) {
     // Mês inteiro: avulsos e reuniões na lista; eventos semanais agrupados por série.
     const sel = estado.diaSelecionado;
     const evsLista = sel ? (porDia.get(sel) || []) : eventos.filter((e) => !ehSemanal(e));
-    const resLista = sel ? (reuPorDia.get(sel) || []) : reunioes.filter((r) => r.data >= hojeIso);
+    const resLista = (sel ? (reuPorDia.get(sel) || []) : reunioes.filter((r) => r.data >= hojeIso)).filter((r) => !r.concluido_em);
     const pendentes = juntar(evsLista.filter((e) => !e.concluido_em), resLista);
     const concluidos = (sel ? (porDia.get(sel) || []) : eventos).filter((e) => e.concluido_em);
+    const reunioesRealizadas = (sel ? (reuPorDia.get(sel) || []) : reunioes).filter((r) => r.concluido_em);
     dataNovo = sel || (hojeIso.slice(0, 7) === inicio.slice(0, 7) ? hojeIso : inicio);
     const aberto = !!estado.concluidosAbertos;
     const itemConcluido = (e) => `
@@ -860,6 +869,21 @@ async function telaCalendario(ctx) {
           <button type="button" class="btn-icone" data-acao="menu-concluido" aria-haspopup="menu" aria-expanded="false" aria-label="Opções de ${esc(e.titulo)} (${esc(e.data.slice(8))}/${esc(e.data.slice(5, 7))})">⋯</button>
           <div class="menu-acoes" role="menu" hidden>
             <button type="button" role="menuitem" data-acao="reabrir" data-id="${e.id}">Reabrir evento</button>
+          </div>
+        </div>` : ''}
+      </div>`;
+    const itemReuniaoRealizada = (r) => `
+      <div class="concluido-item">
+        <a class="concluido-linha" href="#/reuniao/${r.id}">
+          <span class="status-dot concluido" aria-label="Realizada"></span>
+          <span class="concluido-data">${esc(r.data.slice(8))}/${esc(r.data.slice(5, 7))}</span>
+          <span class="concluido-hora">${esc(hora(r.horario) || '—')}</span>
+          <span class="concluido-nome">${esc(r.titulo)} <span class="status-dot reuniao" title="Reunião" aria-label="Reunião"></span></span>
+        </a>
+        ${eAdmin() ? `<div class="menu-concluido">
+          <button type="button" class="btn-icone" data-acao="menu-concluido" aria-haspopup="menu" aria-expanded="false" aria-label="Opções de ${esc(r.titulo)}">⋯</button>
+          <div class="menu-acoes" role="menu" hidden>
+            <button type="button" role="menuitem" data-acao="reabrir-reuniao" data-id="${r.id}">Reabrir reunião</button>
           </div>
         </div>` : ''}
       </div>`;
@@ -878,11 +902,13 @@ async function telaCalendario(ctx) {
       <section class="secao card concluidos ${aberto ? 'aberto' : ''}">
         <button type="button" class="concluidos-titulo" data-acao="alternar-concluidos" aria-expanded="${aberto}" aria-controls="lista-concluidos">
           <span>Concluídos ${sel ? 'neste dia' : 'neste mês'}</span>
-          <span class="contador">${concluidos.length}</span>
+          <span class="contador">${concluidos.length + reunioesRealizadas.length}</span>
           <span class="seta" aria-hidden="true">▾</span>
         </button>
         <div id="lista-concluidos" ${aberto ? '' : 'hidden'}>
-          ${concluidos.length ? concluidos.map(itemConcluido).join('') : `<p class="vazio">${sel ? 'Nenhum evento concluído neste dia.' : 'Nenhum evento concluído neste mês.'}</p>`}
+          ${concluidos.length || reunioesRealizadas.length
+            ? [...concluidos.map(itemConcluido), ...reunioesRealizadas.map(itemReuniaoRealizada)].join('')
+            : `<p class="vazio">${sel ? 'Nada concluído neste dia.' : 'Nada concluído neste mês.'}</p>`}
         </div>
       </section>`;
   }
@@ -930,6 +956,17 @@ async function telaCalendario(ctx) {
       menu.hidden = !abrir;
       b.setAttribute('aria-expanded', String(abrir));
       if (abrir) { anima(menu, { opacity: [0, 1], y: [-4, 0] }, { duration: 0.16 }); $('button', menu).focus(); }
+    } else if (acao === 'reabrir-reuniao') {
+      fecharMenus();
+      if (!eAdmin()) return;
+      if (!(await confirmar('Voltar esta reunião para as próximas?', 'Reabrir', 'btn'))) return;
+      try {
+        await gravar('reunioes', { concluido_em: null, concluido_por: null }, Number(b.dataset.id));
+        aviso('Reunião reaberta ✓');
+        roteador(true);
+      } catch (err) {
+        aviso(traduzErro(err), true);
+      }
     } else if (acao === 'reabrir') {
       // Só o admin: volta só esta data para os pendentes; escala, músicas, programa e materiais ficam
       fecharMenus();
@@ -1231,6 +1268,9 @@ async function telaEvento(id, ctx) {
       <div class="linha" style="margin-top:.75rem">
         <a class="btn peq" href="#/telao/${ev.id}">${ICONES.telao} Telão</a>
         <button class="btn peq secundario" type="button" data-acao="whatsapp">${ICONES.conversa} Escala p/ WhatsApp</button>
+        ${eAdmin() ? (ev.concluido_em
+          ? '<button class="btn peq secundario" type="button" data-acao="reabrir-evento">Reabrir evento</button>'
+          : '<button class="btn peq secundario btn-realizado" type="button" data-acao="concluir-evento"><span class="status-dot concluido" aria-hidden="true"></span> Marcar como realizado</button>') : ''}
       </div>
     </div>
     ${resumoHTML}
@@ -1289,6 +1329,19 @@ async function telaEvento(id, ctx) {
     else if (acao === 'editar') {
       const reg = listas[b.dataset.tabela].find((r) => r.id === Number(b.dataset.id));
       if (reg) abrirFormItem(b.dataset.tabela, reg, ev, listas);
+    } else if (acao === 'concluir-evento' || acao === 'reabrir-evento') {
+      // Só o admin: evento realizado (bolinha verde no calendário) ou de volta para os pendentes.
+      // Escalas, músicas, programa e materiais ficam como estão.
+      if (!eAdmin()) return;
+      const concluir = acao === 'concluir-evento';
+      if (!(await confirmar(concluir ? 'Marcar este evento como realizado?' : 'Voltar este evento para os pendentes?', concluir ? 'Marcar como realizado' : 'Reabrir', 'btn'))) return;
+      try {
+        await gravar('eventos', concluir ? { concluido_em: new Date().toISOString(), concluido_por: estado.lider.id } : { concluido_em: null, concluido_por: null }, ev.id);
+        aviso(concluir ? 'Evento realizado ✓' : 'Evento reaberto ✓');
+        roteador(true);
+      } catch (err) {
+        aviso(traduzErro(err), true);
+      }
     } else if (acao === 'copiar-aniv') {
       copiarTexto(textoAniversariantes(aniversariantes, mesEvento), 'Lista copiada ✓');
     }
@@ -1496,6 +1549,7 @@ document.addEventListener('keydown', (e) => {
    Tela: histórico de músicas (últimas 8 semanas)
    --------------------------------------------------------------------- */
 async function telaHistorico(ctx) {
+  if (!eAdmin()) { location.hash = '#/calendario'; return; }
   const hoje = new Date();
   const desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 56);
   const { data, error } = await db.from('musicas')
@@ -1741,8 +1795,9 @@ async function telaEquipe(id, ctx) {
   const dispensados = new Set((rDis.data || []).map((x) => x.evento_id));
   const iProx = eventos.findIndex((e) => !dispensados.has(e.id));
   const proximo = iProx >= 0 ? eventos[iProx] : null;
-  // Datas antes do destaque que a equipe marcou "sem escala" (com Desfazer)
-  const pulados = eventos.slice(0, iProx >= 0 ? iProx : eventos.length).filter((e) => dispensados.has(e.id));
+  // Datas que a equipe marcou "sem escala" (com Desfazer). Só eventos pendentes: quando o admin marca
+  // o evento como realizado ele sai daqui; se o admin reabrir, volta.
+  const pulados = eventos.filter((e) => dispensados.has(e.id));
 
   const linhasEscala = (lista) => lista.length
     ? `<ul class="lista">${lista.map((e) => `<li><span class="cresce"><strong>${esc(e.funcao)}</strong> — ${esc(e.nome)}</span></li>`).join('')}</ul>`
@@ -3009,9 +3064,10 @@ function cartaoReuniao(r, modo) {
   const bloco = modo === 'semana'
     ? `<div class="evento-data hora-bloco"><b>${esc(hora(r.horario) || '—')}</b></div>`
     : `<div class="evento-data"><b>${dt.getDate()}</b><small>${DIAS_ABREV[dt.getDay()]}</small></div>`;
-  const meta = [modo === 'semana' ? null : (hora(r.horario) || 'Sem horário'), 'Reunião', r.local].filter(Boolean).map(esc).join(' · ');
-  return `<div class="card evento-linha reuniao-linha">
-    <span class="status-dot reuniao" title="Reunião" aria-label="Reunião"></span>
+  const feita = !!r.concluido_em;
+  const meta = [modo === 'semana' ? null : (hora(r.horario) || 'Sem horário'), 'Reunião', r.local, feita ? 'realizada' : null].filter(Boolean).map(esc).join(' · ');
+  return `<div class="card evento-linha reuniao-linha ${feita ? 'feito' : ''}">
+    <span class="status-dot ${feita ? 'concluido' : 'reuniao'}" title="${feita ? 'Reunião realizada' : 'Reunião'}" aria-label="${feita ? 'Reunião realizada' : 'Reunião'}"></span>
     <a class="evento-link" href="#/reuniao/${r.id}">
       ${bloco}
       <div class="cresce"><strong class="evento-nome">${esc(r.titulo)}</strong><div class="suave">${meta}</div></div>
@@ -3047,7 +3103,8 @@ async function telaReunioes(ctx, idFoco) {
 
   const cartao = (r) => {
     const resps = respostas.filter((x) => x.reuniao_id === r.id);
-    const passada = r.data < hojeIso;
+    const realizada = !!r.concluido_em;
+    const passada = r.data < hojeIso || realizada; // depois de realizada, a resposta não muda mais
     let corpo;
     if (!eAdmin()) {
       const minha = resps.find((x) => x.lider_id === estado.lider.id)?.resposta;
@@ -3086,12 +3143,16 @@ async function telaReunioes(ctx, idFoco) {
     }
     return `<article class="card reuniao-card ${passada ? 'passada' : ''}" id="reuniao-${r.id}">
       <div class="linha-entre">
-        <h3><span class="status-dot reuniao" aria-hidden="true"></span> ${esc(r.titulo)}</h3>
+        <h3><span class="status-dot ${realizada ? 'concluido' : 'reuniao'}" aria-hidden="true"></span> ${esc(r.titulo)}</h3>
         ${eAdmin() ? `<button class="btn-icone" type="button" data-acao="editar-reuniao" data-id="${r.id}" aria-label="Editar ${esc(r.titulo)}">✎</button>` : ''}
       </div>
+      ${realizada ? '<span class="selo concluido-selo"><span class="status-dot concluido"></span> Realizada</span>' : ''}
       <p class="suave reuniao-quando">${esc(capital(dataLonga(r.data)))}${r.horario ? ` · ${esc(hora(r.horario))}` : ''}${r.local ? ` · ${esc(r.local)}` : ''}</p>
       ${r.pauta ? `<p class="texto-nota">${esc(r.pauta)}</p>` : ''}
       ${corpo}
+      ${eAdmin() ? `<div class="acoes-reuniao">${realizada
+        ? `<button class="btn peq secundario" type="button" data-acao="reabrir-reuniao" data-id="${r.id}">Reabrir reunião</button>`
+        : `<button class="btn peq secundario btn-realizado" type="button" data-acao="concluir-reuniao" data-id="${r.id}"><span class="status-dot concluido" aria-hidden="true"></span> Marcar como realizada</button>`}</div>` : ''}
     </article>`;
   };
 
@@ -3100,8 +3161,8 @@ async function telaReunioes(ctx, idFoco) {
     html = `<a class="btn-texto" href="#/reunioes" style="padding-left:0">← Reuniões</a>
       ${reunioes.length ? cartao(reunioes[0]) : '<div class="card"><p>Reunião não encontrada.</p></div>'}`;
   } else {
-    const proximas = reunioes.filter((r) => r.data >= hojeIso);
-    const anteriores = reunioes.filter((r) => r.data < hojeIso).reverse().slice(0, 12);
+    const proximas = reunioes.filter((r) => r.data >= hojeIso && !r.concluido_em);
+    const anteriores = reunioes.filter((r) => r.data < hojeIso || r.concluido_em).reverse().slice(0, 12);
     html = `
       <div class="secao-topo"><h1 style="margin:0">Reuniões</h1>
         ${eAdmin() ? '<button class="btn peq" type="button" data-acao="nova-reuniao">+ Reunião</button>' : ''}</div>
@@ -3116,6 +3177,19 @@ async function telaReunioes(ctx, idFoco) {
     if (!b || b.disabled) return;
     const acao = b.dataset.acao;
     if (acao === 'nova-reuniao') abrirFormReuniao(null);
+    else if (acao === 'concluir-reuniao' || acao === 'reabrir-reuniao') {
+      // Só o admin: reunião realizada (bolinha verde no calendário) ou de volta para as próximas
+      if (!eAdmin()) return;
+      const concluir = acao === 'concluir-reuniao';
+      if (!(await confirmar(concluir ? 'Marcar esta reunião como realizada?' : 'Voltar esta reunião para as próximas?', concluir ? 'Marcar como realizada' : 'Reabrir', 'btn'))) return;
+      try {
+        await gravar('reunioes', concluir ? { concluido_em: new Date().toISOString(), concluido_por: estado.lider.id } : { concluido_em: null, concluido_por: null }, Number(b.dataset.id));
+        aviso(concluir ? 'Reunião realizada ✓' : 'Reunião reaberta ✓');
+        roteador(true);
+      } catch (err) {
+        aviso(traduzErro(err), true);
+      }
+    }
     else if (acao === 'editar-reuniao') abrirFormReuniao(reunioes.find((r) => r.id === Number(b.dataset.id)));
     else if (acao === 'responder') {
       const grupo = b.parentElement.querySelectorAll('button');

@@ -45,7 +45,8 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 - Duas visões: **Semana** e **Mês**. Os líderes abrem em **Semana**; o ADM abre em **Mês** (onde fica a lista de concluídos). A troca é pelo botão no topo.
 - **Semana:** de segunda a domingo, com o intervalo real no cabeçalho (ex.: "23 a 29 de novembro", "30 de novembro a 6 de dezembro") e setas para voltar ou avançar uma semana. Em cada dia, os eventos e reuniões em ordem de horário.
 - **Mês:** grade de domingo a sábado; tocar num dia mostra logo abaixo os eventos daquela data. Abaixo, **Próximos eventos** e **Concluídos neste mês**.
-- Bolinhas: **vermelha** = evento pendente, **verde** = concluído, **roxa** = evento semanal, **amarela** = reunião.
+- Bolinhas: **vermelha** = evento avulso pendente, **verde** = evento realizado (avulso ou data semanal), **roxa** = data semanal ainda pendente, **amarela** = reunião.
+- **Marcar como realizado** (só ADM): na tela do evento, ao lado de Telão e WhatsApp, pergunta "Marcar este evento como realizado?" e deixa a bolinha verde no calendário. No evento realizado o botão vira **Reabrir evento**. O mesmo vale pela bolinha vermelha no calendário e pelo menu ⋯ em Concluídos.
 - **Eventos semanais agrupados:** nas listas, as datas dos eventos semanais ficam numa seção recolhível **Eventos semanais**, com uma linha por série (cadastro da série: título, "Toda terça às 19h30", quantas datas e quantas pendentes). Ao abrir uma série, aparecem as datas do período exibido (a semana ou o mês), cada uma com escala, repertório, materiais e situação próprios; o ADM conclui pela bolinha de cada data. Na Semana, o dia avisa "1 evento semanal (em Eventos semanais, abaixo)". No Mês, as bolinhas continuam na grade e, ao tocar num dia, todas as datas daquele dia (inclusive as semanais) aparecem logo abaixo.
 - Séries com o mesmo título continuam separadas (ex.: duas séries "Escola Talmidim" com horários diferentes aparecem em duas linhas). O app não junta séries nem muda horários sozinho.
 - Só o ADM tem **+ Evento** e **Importar eventos** (seção 15).
@@ -72,6 +73,7 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 
 - O ADM agenda (título, data, horário, local e pauta). Os líderes veem a lista e respondem **Vou** ou **Não vou**; dá para mudar a resposta. Uma resposta por conta de líder.
 - As reuniões aparecem no calendário com bolinha amarela.
+- **Marcar como realizada** (só ADM): no cartão da reunião, pergunta "Marcar esta reunião como realizada?". A reunião ganha o selo **Realizada**, vai para **Reuniões anteriores**, fica com bolinha **verde** no calendário e aparece em **Concluídos neste mês** (com ⋯ › **Reabrir reunião**). Depois de realizada, os líderes não mudam mais a resposta. **Reabrir reunião** volta para as próximas.
 - O ADM vê em cada reunião quantos **confirmaram**, **recusaram** e estão **sem resposta**, e em **Ver quem respondeu** os nomes de cada grupo.
 - No Supabase, cada líder só lê e grava a própria resposta; só o ADM vê todas e agenda reuniões.
 
@@ -82,7 +84,7 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 - O líder gerencia as escalas do próprio ministério; o admin, as de todos. O texto para o WhatsApp continua em **Escala p/ WhatsApp**.
 - **Pular escala desta data** (na escala do evento e em **Minha equipe**): pergunta "Marcar esta data como sem escala para sua equipe?". Confirmado, mostra **Sem escala necessária** e a data deixa de ser o destaque de escala pendente da equipe. O evento continua no calendário e a decisão vale só para aquele ministério naquela data. **Desfazer** volta a deixar a escala pendente. Quem pode ver as escalas daquele ministério vê "Sem escala necessária"; o texto do WhatsApp também mostra. Só o próprio ministério (ou o ADM) marca e desfaz.
 - Sugestões por ministério: **Diáconos** podem escrever "Todos os diáconos" quando for a equipe toda; **Kids** escala quem vai ajudar na salinha; **Mídia** cuida de fotos e conteúdo para o Instagram; **Audiovisual** cuida de projeção, transmissão e iluminação.
-- **Minha equipe** (líder): destaca o próximo evento que ainda precisa de escala da equipe, com **Adicionar escala** / **Editar escala** e **Pular escala desta data**. As datas marcadas como sem escala antes dele aparecem em **Sem escala necessária**, com **Desfazer**. Todos os eventos entram, inclusive os semanais (ex.: Culto de domingo, Escola Talmidim); a equipe pula as datas em que não serve. Para outro evento, o líder abre o evento pelo calendário.
+- **Minha equipe** (líder): destaca o próximo evento que ainda precisa de escala da equipe, com **Adicionar escala** / **Editar escala** e **Pular escala desta data**. Todas as próximas datas que a equipe marcou como sem escala aparecem em **Sem escala necessária**, com **Desfazer**. Quando o ADM marca o evento como realizado, a data sai dessa lista; se o ADM reabrir, ela volta. Todos os eventos entram, inclusive os semanais (ex.: Culto de domingo, Escola Talmidim); a equipe pula as datas em que não serve. Para outro evento, o líder abre o evento pelo calendário.
 
 **Ministérios** (só admin)
 
@@ -119,7 +121,8 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 **Músicas do evento**
 
 - O líder do **Louvor** cadastra as músicas (nome e link opcional) na tela do evento e muda a ordem com ↑ ↓. O ADM também gerencia.
-- Os líderes de **Dança** e **Audiovisual** consultam o repertório na ordem do Louvor. Os outros ministérios não veem. Essa regra vale no Supabase e não depende da tela de permissões das escalas.
+- Os líderes de **Dança** e **Audiovisual** veem as músicas que o Louvor colocou **no evento**, na ordem do Louvor. Os outros ministérios não veem. Essa regra vale no Supabase e não depende da tela de permissões das escalas.
+- O **Histórico** de músicas (últimas 8 semanas) é só do ADM: saiu do menu dos líderes.
 
 **Membros** (só admin)
 
@@ -246,6 +249,13 @@ $$;
 -- 5) Quem pode chamar
 revoke execute on function public.registrar_acesso(), public.acessos_lideres() from public, anon;
 grant execute on function public.registrar_acesso(), public.acessos_lideres() to authenticated;
+```
+
+### Migração v8.10 — Reunião realizada (aplicada neste projeto em 21/11/2026)
+
+```sql
+alter table public.reunioes add column if not exists concluido_em timestamptz;
+alter table public.reunioes add column if not exists concluido_por uuid references auth.users (id) on delete set null;
 ```
 
 ### Migração v8.8 — Só o administrador troca senhas (aplicada neste projeto em 21/11/2026)
@@ -868,7 +878,7 @@ python -m http.server 8124
 
 Depois abra <http://localhost:8124>. Para testar duas contas ao mesmo tempo (ADM e líder), use uma aba em <http://localhost:8124> e outra em <http://127.0.0.1:8124>: cada endereço guarda o seu próprio login.
 
-**Quando mudar o app:** troque a versão em `sw.js` (hoje é `igreja-v8.8`; na próxima mudança use `igreja-v9`) para os celulares pegarem os arquivos novos.
+**Quando mudar o app:** troque a versão em `sw.js` (hoje é `igreja-v8.10`; na próxima mudança use `igreja-v9`) para os celulares pegarem os arquivos novos.
 
 Para testar três contas ao mesmo tempo, use também <http://[::1]:8124>.
 
@@ -1008,7 +1018,7 @@ Dicas:
 - **Membros** (admin): Cadastro (formulário e CSV), Lista e Aniversariantes, com Copiar lista.
 - **Importar eventos** (admin): prévia com avisos de possível duplicado e de outros eventos no mesmo dia.
 - **Admin:** líderes (criar com senha inicial, trocar senha, remover), painel de acessos, permissões de visualização.
-- **Escala para o WhatsApp**, **Telão**, **Histórico** das últimas 8 semanas, **Realtime**, **PWA**, identidade escura Qhall, animações com Motion.
+- **Escala para o WhatsApp**, **Telão**, **Histórico** das últimas 8 semanas (só ADM), **Realtime**, **PWA**, identidade escura Qhall, animações com Motion.
 
 ## 13. Visual (Qhall)
 
@@ -1017,7 +1027,7 @@ Dicas:
 - **Cores:** fundo azul-marinho quase preto, cartões azul-ardósia e bordas finas. O app usa sempre essa identidade escura.
 - **Fundo de luz fluida:** a mesma técnica da capa da Cantina Vicenza, nas cores do app. Uma camada contínua atrás de todas as telas, desenhada em WebGL (`<canvas>`): faixas largas de luz azul suave que se dobram e se movem devagar, como seda, sobre o azul-marinho, com um grão fino por cima e contraste baixo para o texto continuar legível. No **login** no ritmo normal; **dentro do app** (ex.: atrás do calendário) mais fraca (72%) e com cerca de um terço da velocidade; no telão ainda mais lenta. A troca entre login e app é suave. Desenha a ~30 quadros por segundo, em resolução baixa (leve no celular), e pausa quando a aba não está visível. Com "reduzir movimento", fica um quadro parado. Sem WebGL, aparece um degradê azul estático.
 - **Fontes:** Bricolage Grotesque nos títulos e Inter nos textos e controles (carregadas do Google Fonts; sem internet, usa as fontes do sistema).
-- **Navegação:** no PC, barra lateral fixa em azul-marinho sólido (#0D172B), com ícones e nomes, e o item ativo no azul mais vivo. No celular, as mesmas opções no menu inferior. Ordem: Calendário, Reuniões, Minha equipe (líder) ou Ministérios (admin), Membros e Administração (admin) e Histórico.
+- **Navegação:** no PC, barra lateral fixa em azul-marinho sólido (#0D172B), com ícones e nomes, e o item ativo no azul mais vivo. No celular, as mesmas opções no menu inferior. Ordem: Calendário, Reuniões, Minha equipe (líder) ou Ministérios (admin), Membros, Administração e Histórico (só admin). Líder vê Calendário, Reuniões e Minha equipe.
 - **Topo:** faixa inteira em azul-marinho sólido (#0D172B), a mesma cor da barra lateral, da logo até o perfil, sem emenda, com uma linha fina e discreta embaixo. Cruz e Qhall à esquerda; à direita, o botão de perfil com borda suave, avatar azul com a inicial e o primeiro nome (ex.: "Davi ▾"); o menu tem **Alterar senha** (só administrador) e **Sair**. O degradê animado fica só atrás da área de conteúdo. A barra do navegador no celular usa a mesma cor.
 - **Calendário:** dias Dom a Sáb com divisórias finas, fim de semana em azul discreto, data selecionada num quadrado azul de cantos arredondados e hoje com contorno. Mês centralizado entre as setas; **+ Evento** e, para o admin, **Importar eventos** logo abaixo, à direita. Bolinhas vermelha (pendente) e verde (concluído) com legenda.
 - **Vidro discreto** (inspirado no Liquid Glass) nos botões, no menu do usuário e nas janelas de confirmação: leve transparência com desfoque, mantendo o texto legível. Navegadores sem desfoque usam fundo sólido.
@@ -1026,7 +1036,19 @@ Dicas:
 
 ## 14. Histórico de versões
 
-**v8.8 (esta)**
+**v8.10 (esta)**
+
+- **Reunião realizada** (ADM): botão **Marcar como realizada** no cartão da reunião e **Reabrir reunião**; bolinha verde no calendário e item em Concluídos neste mês. Colunas `reunioes.concluido_em` e `concluido_por` (só o admin altera reuniões, pela RLS que já existia).
+- `sw.js`: `igreja-v8.10`.
+
+**v8.9**
+
+- **Marcar como realizado** na tela do evento (ADM), com **Reabrir evento**; bolinha verde no calendário também para datas semanais realizadas (roxa só para semanal pendente).
+- **Minha equipe:** "Sem escala necessária" lista todas as próximas datas puladas; evento realizado sai da lista e volta se o ADM reabrir.
+- **Histórico de músicas** saiu do menu dos líderes (só ADM). Dança, Louvor e Audiovisual veem as músicas só dentro do evento.
+- `sw.js`: `igreja-v8.9`.
+
+**v8.8**
 
 - **Contas e senhas pelo app (só ADM):** Admin › Líderes mostra nome e e-mail, cria contas e tem **Redefinir senha** por líder. Campo **Nova senha** com olhinho (só para a senha digitada na janela) e **Copiar**; depois de salvar, a senha aparece para copiar antes de fechar. A senha atual nunca é lida nem exibida.
 - **Login:** "Esqueci a senha" virou "Esqueceu a senha? Fale com o administrador."; sem recuperação por e-mail.
@@ -1194,6 +1216,9 @@ Visual e interno:
 - [ ] Depois de recarregar, o evento continua em **Concluídos neste mês** (recolhido até tocar no título), com bolinha verde e nome riscado.
 - [ ] Grade: dia com pendente = bolinha vermelha; todos concluídos = verde. O concluído aparece só no mês dele.
 - [ ] Líder vê as bolinhas, mas não conclui.
+- [ ] ADM: **Marcar como realizado** na tela do evento deixa a bolinha verde (inclusive em data semanal); **Reabrir evento** volta para pendente.
+- [ ] Data pulada por uma equipe some de "Sem escala necessária" quando o evento é realizado e volta quando o ADM reabre.
+- [ ] Líder não vê Histórico no menu; `#/historico` volta para o calendário.
 
 **Eventos semanais e reuniões**
 
@@ -1215,6 +1240,7 @@ Visual e interno:
 - [ ] Líder responde Vou/Não vou e muda a resposta; fica uma resposta só por conta.
 - [ ] ADM vê confirmaram, recusaram e sem resposta, com os nomes.
 - [ ] Líder não consegue responder por outro nem agendar reunião (Supabase recusa).
+- [ ] ADM: **Marcar como realizada** deixa a reunião com selo Realizada, bolinha verde e em Concluídos; os líderes não mudam mais a resposta; **Reabrir reunião** volta. Líder não marca nem reabre (Supabase recusa).
 
 **Programa**
 
@@ -1265,7 +1291,7 @@ Visual e interno:
 
 **Geral**
 
-- [ ] `sw.js` em `igreja-v8.8`; celular mostra a versão nova depois de fechar e abrir.
+- [ ] `sw.js` em `igreja-v8.10`; celular mostra a versão nova depois de fechar e abrir.
 - [ ] Telão, WhatsApp, Histórico e Materiais funcionam no celular.
 - [ ] Nenhum arquivo contém a chave `service_role` / `secret`.
 
@@ -1294,7 +1320,7 @@ Visual e interno:
 
 20. **Identidade escura sempre:** o visual Qhall é escuro; o modo claro automático da v5 deixou de existir.
 21. **Imagem de referência:** a imagem anexada mostrava a marca (cruz + Qhall). A barra lateral, as cores e o calendário seguiram a descrição do pedido.
-22. **Histórico** continua no menu, depois dos itens pedidos, para não perder a função.
+22. **Histórico** de músicas fica só para o ADM (v8.9); os líderes veem as músicas dentro de cada evento.
 23. **Materiais:** o limite de 50 MB por arquivo e 1 GB no total é do plano gratuito do Supabase. Vídeos maiores devem ir como link.
 24. **Abertura** aparece a cada vez que o app é aberto (dura menos de 1,5 s).
 25. **Lembrete de Aniversariantes** pertence ao ministério **Audiovisual** (procurado pelo nome). Se não existir um ministério com esse nome, o lembrete não é criado.
