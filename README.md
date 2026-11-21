@@ -27,12 +27,14 @@ Site gratuito para organizar cultos, ensaios e reuniões: calendário, programa,
 - **Endereços de login liberados:** `https://hokimofi.github.io/qhall/` (site publicado), `http://localhost:8124` e `http://127.0.0.1:8124` (testes no computador).
 - **Site publicado (GitHub Pages):** <https://hokimofi.github.io/qhall/>, a partir do repositório `Hokimofi/qhall` (branch `main`, pasta raiz). Para atualizar: `git push` na branch `main`; o site muda em cerca de 1 minuto.
 - **Instalar no celular:** abra o endereço no Chrome (Android: ⋮ › Adicionar à tela inicial) ou no Safari (iPhone: Compartilhar › Adicionar à Tela de Início). Não há arquivo para baixar.
-- **Supabase liberado para o site (21/11/2026):** em **Authentication › URL Configuration**, o **Site URL** é `https://hokimofi.github.io/qhall/` e `https://hokimofi.github.io/qhall/**` está nas Redirect URLs, então o link de "Esqueci a senha" volta para o site publicado.
+- **Supabase liberado para o site (21/11/2026):** em **Authentication › URL Configuration**, o **Site URL** é `https://hokimofi.github.io/qhall/` e `https://hokimofi.github.io/qhall/**` está nas Redirect URLs, para links de login do Supabase voltarem ao site publicado. (O app não tem mais "Esqueci a senha": quem esqueceu fala com o administrador.)
 - A senha do banco foi gerada pelo Supabase e não é usada pelo app. Se precisar dela, redefina em **Project Settings › Database**.
 
 ## Como funciona o acesso
 
-- **Login:** só e-mail e senha. Não existe cadastro aberto no app: o **admin cadastra o líder** (nome, e-mail, senha inicial e ministério) e passa a senha em particular. O líder pode trocá-la em **Alterar senha**, no menu com o nome dele (canto superior direito). "Esqueci a senha" envia um link por e-mail.
+- **Login:** só e-mail e senha. Não existe cadastro aberto no app: o **admin cria a conta** (nome, e-mail, senha inicial e ministério) em **Admin › Líderes** e passa a senha em particular. Na tela de login aparece "Esqueceu a senha? Fale com o administrador.": não há recuperação por e-mail.
+- **Senhas:** só o administrador cria contas e redefine senhas (**Admin › Líderes › Redefinir senha**). O campo **Nova senha** tem um olhinho para mostrar ou ocultar o que acabou de ser digitado e o botão **Copiar**; depois de salvar, a janela mostra de novo a senha (oculta) para copiar antes de fechar. A senha atual de ninguém é lida nem exibida (o banco guarda só o hash). Líder **não** troca a própria senha: o menu dele não tem "Alterar senha" e o Supabase recusa a troca feita pela conta de um líder. O admin continua trocando a própria senha em **Alterar senha**.
+- **No servidor:** as funções `criar_lider`, `definir_senha_lider` e `remover_lider` conferem se quem chamou é administrador; uma trava em `auth.users` recusa troca de senha de conta que não é de administrador. Nenhuma chave privada (`service_role`) no app ou no GitHub.
 - Só **líderes** entram no app. Membros da equipe não têm login.
 - **ADM:** cinco contas individuais de administrador: Davi, mãe do Davi, pai do Davi, Elan e Fabrício. Os pais do Davi têm o acesso pastoral pela própria conta de ADM. O ADM vê e edita tudo: eventos, eventos semanais, reuniões, escalas de todos os ministérios, repertório, membros, ministérios, permissões, anotações e o painel de acessos.
 - **Líder (base igual para todos, inclusive Jiu-Jitsu):** consulta o calendário, monta a escala do próprio ministério num evento que já existe (e edita depois), adiciona itens da própria equipe ao programa, envia materiais e responde às reuniões. Vê as escalas de outros ministérios conforme a tela de permissões.
@@ -244,6 +246,41 @@ $$;
 -- 5) Quem pode chamar
 revoke execute on function public.registrar_acesso(), public.acessos_lideres() from public, anon;
 grant execute on function public.registrar_acesso(), public.acessos_lideres() to authenticated;
+```
+
+### Migração v8.8 — Só o administrador troca senhas (aplicada neste projeto em 21/11/2026)
+
+Para um banco que já está na v8.2. Cria a trava que recusa a troca de senha feita pela conta de um líder. As funções `criar_lider` e `definir_senha_lider` (só admin) já existiam.
+
+```sql
+-- Quem é admin (usada pela trava abaixo; o serviço de login do Supabase precisa poder chamar)
+create or replace function public.eh_admin_id(p_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.lideres where id = p_id and papel = 'admin');
+$$;
+revoke execute on function public.eh_admin_id(uuid) from public, anon, authenticated;
+grant usage on schema public to supabase_auth_admin;
+grant execute on function public.eh_admin_id(uuid) to supabase_auth_admin;
+
+-- Trava: o serviço de login (supabase_auth_admin) só troca a senha de conta de administrador.
+-- Líder não troca a própria senha (nem pelo app, nem pela API). O "Redefinir senha" do admin
+-- passa pela função definir_senha_lider, que roda como dono do banco e continua funcionando.
+create or replace function public.bloquear_troca_senha_lider()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.encrypted_password is distinct from old.encrypted_password
+     and current_user = 'supabase_auth_admin'
+     and not public.eh_admin_id(new.id) then
+    raise exception 'Só o administrador pode trocar senhas.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.bloquear_troca_senha_lider() from public, anon, authenticated;
+drop trigger if exists trg_bloquear_troca_senha_lider on auth.users;
+create trigger trg_bloquear_troca_senha_lider
+before update of encrypted_password on auth.users
+for each row execute function public.bloquear_troca_senha_lider();
 ```
 
 ### Migração v8.2 — "Pular escala desta data" (aplicada neste projeto em 19/11/2026)
@@ -808,9 +845,7 @@ No Supabase, vá em **Authentication** › **URL Configuration**:
   - `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/**`
   - `http://localhost:8124/**` e `http://127.0.0.1:8124/**` (para testar no computador; já cadastrados neste projeto)
 
-Sem isso, o link de "Esqueci a senha" não volta para o app.
-
-> **E-mails do Supabase:** o serviço de e-mail embutido do plano gratuito envia poucas mensagens por hora. Só é usado em "Esqueci a senha". Se travar, o admin pode definir uma senha nova em **Admin › Líderes › ✎**.
+O app não usa recuperação de senha por e-mail (quem esqueceu fala com o administrador, que usa **Admin › Líderes › Redefinir senha**), então o serviço de e-mail do Supabase não é necessário.
 
 ## 5. Login com Google
 
@@ -833,7 +868,7 @@ python -m http.server 8124
 
 Depois abra <http://localhost:8124>. Para testar duas contas ao mesmo tempo (ADM e líder), use uma aba em <http://localhost:8124> e outra em <http://127.0.0.1:8124>: cada endereço guarda o seu próprio login.
 
-**Quando mudar o app:** troque a versão em `sw.js` (hoje é `igreja-v8.6`; na próxima mudança use `igreja-v9`) para os celulares pegarem os arquivos novos.
+**Quando mudar o app:** troque a versão em `sw.js` (hoje é `igreja-v8.8`; na próxima mudança use `igreja-v9`) para os celulares pegarem os arquivos novos.
 
 Para testar três contas ao mesmo tempo, use também <http://[::1]:8124>.
 
@@ -853,14 +888,14 @@ values ('seu-email@exemplo.com', 'Seu Nome', null, 'admin');
 
 ## 8. Cadastrar líderes e as contas de ADM
 
-**Contas de ADM:** são cinco, uma por pessoa: Davi (já existe), mãe do Davi, pai do Davi, Elan e Fabrício. Para cada uma: **Administração › Líderes › + Novo líder**, com nome, e-mail, senha inicial e papel **Administrador** (sem ministério). Passe a senha em particular; a pessoa troca em **Alterar senha**.
+**Contas de ADM:** são cinco, uma por pessoa: Davi (já existe), mãe do Davi, pai do Davi, Elan e Fabrício. Para cada uma: **Administração › Líderes › + Nova conta**, com nome, e-mail, senha inicial e papel **Administrador** (sem ministério). Passe a senha em particular; o administrador pode trocar a própria senha em **Alterar senha**.
 
 
-1. **Admin › Líderes › + Novo líder**: nome, e-mail, **senha inicial** (mínimo 6 caracteres), papel (Líder ou Administrador) e ministério.
-2. Passe a senha para a pessoa **em particular**. A conta já fica pronta, sem e-mail de confirmação.
-3. A pessoa entra com e-mail e senha e pode trocar a senha em **Alterar senha**, no menu com o nome dela (canto superior direito).
+1. **Admin › Líderes › + Nova conta**: nome, e-mail, **Nova senha** (6 a 72 caracteres; o olhinho mostra o que você digitou e **Copiar** copia), papel (Líder ou Administrador) e ministério.
+2. Depois de criar, a janela **Conta criada** mostra a senha (oculta) com olhinho e **Copiar**. Copie e passe para a pessoa **em particular**. Ao fechar, a senha some da tela. A conta já fica pronta, sem e-mail de confirmação.
+3. A pessoa entra com e-mail e senha. Se esquecer ou quiser trocar, fala com o administrador.
 
-- **Trocar a senha de alguém:** **Admin › Líderes › ✎ › Nova senha**.
+- **Redefinir a senha de alguém:** **Admin › Líderes › Redefinir senha** (ao lado do nome) › **Nova senha** › Salvar. A janela **Senha redefinida** permite copiar antes de fechar. A senha antiga deixa de valer; quem já estava logado continua logado até sair.
 - **Remover um líder:** **Admin › Líderes › ✎ › Remover líder**. A conta de login é apagada; as escalas que ele montou continuam. O admin não pode remover a si mesmo, e o banco não deixa remover nem rebaixar o último admin.
 
 Como funciona por dentro: a função `criar_lider` do banco (só o admin pode chamar) cria a conta no Supabase Auth já confirmada, com a senha criptografada, e o registro em `lideres`. Nada usa a chave `service_role`.
@@ -983,7 +1018,7 @@ Dicas:
 - **Fundo de luz fluida:** a mesma técnica da capa da Cantina Vicenza, nas cores do app. Uma camada contínua atrás de todas as telas, desenhada em WebGL (`<canvas>`): faixas largas de luz azul suave que se dobram e se movem devagar, como seda, sobre o azul-marinho, com um grão fino por cima e contraste baixo para o texto continuar legível. No **login** no ritmo normal; **dentro do app** (ex.: atrás do calendário) mais fraca (72%) e com cerca de um terço da velocidade; no telão ainda mais lenta. A troca entre login e app é suave. Desenha a ~30 quadros por segundo, em resolução baixa (leve no celular), e pausa quando a aba não está visível. Com "reduzir movimento", fica um quadro parado. Sem WebGL, aparece um degradê azul estático.
 - **Fontes:** Bricolage Grotesque nos títulos e Inter nos textos e controles (carregadas do Google Fonts; sem internet, usa as fontes do sistema).
 - **Navegação:** no PC, barra lateral fixa em azul-marinho sólido (#0D172B), com ícones e nomes, e o item ativo no azul mais vivo. No celular, as mesmas opções no menu inferior. Ordem: Calendário, Reuniões, Minha equipe (líder) ou Ministérios (admin), Membros e Administração (admin) e Histórico.
-- **Topo:** faixa inteira em azul-marinho sólido (#0D172B), a mesma cor da barra lateral, da logo até o perfil, sem emenda, com uma linha fina e discreta embaixo. Cruz e Qhall à esquerda; à direita, o botão de perfil com borda suave, avatar azul com a inicial e o primeiro nome (ex.: "Davi ▾"); o menu tem **Alterar senha** e **Sair**. O degradê animado fica só atrás da área de conteúdo. A barra do navegador no celular usa a mesma cor.
+- **Topo:** faixa inteira em azul-marinho sólido (#0D172B), a mesma cor da barra lateral, da logo até o perfil, sem emenda, com uma linha fina e discreta embaixo. Cruz e Qhall à esquerda; à direita, o botão de perfil com borda suave, avatar azul com a inicial e o primeiro nome (ex.: "Davi ▾"); o menu tem **Alterar senha** (só administrador) e **Sair**. O degradê animado fica só atrás da área de conteúdo. A barra do navegador no celular usa a mesma cor.
 - **Calendário:** dias Dom a Sáb com divisórias finas, fim de semana em azul discreto, data selecionada num quadrado azul de cantos arredondados e hoje com contorno. Mês centralizado entre as setas; **+ Evento** e, para o admin, **Importar eventos** logo abaixo, à direita. Bolinhas vermelha (pendente) e verde (concluído) com legenda.
 - **Vidro discreto** (inspirado no Liquid Glass) nos botões, no menu do usuário e nas janelas de confirmação: leve transparência com desfoque, mantendo o texto legível. Navegadores sem desfoque usam fundo sólido.
 - O degradê do fundo ficou um pouco mais visível.
@@ -991,7 +1026,15 @@ Dicas:
 
 ## 14. Histórico de versões
 
-**v8.6 (esta)**
+**v8.8 (esta)**
+
+- **Contas e senhas pelo app (só ADM):** Admin › Líderes mostra nome e e-mail, cria contas e tem **Redefinir senha** por líder. Campo **Nova senha** com olhinho (só para a senha digitada na janela) e **Copiar**; depois de salvar, a senha aparece para copiar antes de fechar. A senha atual nunca é lida nem exibida.
+- **Login:** "Esqueci a senha" virou "Esqueceu a senha? Fale com o administrador."; sem recuperação por e-mail.
+- **Líder não troca a própria senha:** sem "Alterar senha" no menu dele e trava no Supabase (`trg_bloquear_troca_senha_lider`) que recusa a troca feita pela conta de um líder. O admin continua trocando a própria senha.
+- Testado: líder bloqueado de criar conta, redefinir, remover e trocar a própria senha; admin cria e redefine (senha nova confere); login de líder com a senha redefinida funcionou.
+- `sw.js`: `igreja-v8.8`.
+
+**v8.6**
 
 - **Fundo igual ao da capa da Cantina Vicenza, em azul:** luz fluida em WebGL (ruído simplex com distorção, como seda), grão fino e degradê estático de reserva. Login no ritmo normal; dentro do app mais fraca e mais lenta; quadro parado com "reduzir movimento". Substitui as manchas da v8.5.
 - `sw.js`: `igreja-v8.6`.
@@ -1132,9 +1175,11 @@ Visual e interno:
 
 **Login e contas**
 
-- [ ] Login só mostra e-mail, senha e "Esqueci a senha".
-- [ ] Admin cadastra líder com senha inicial; o líder entra com ela; **Alterar senha** (menu do nome) troca a senha.
-- [ ] Admin troca a senha de um líder e remove um líder (a pessoa não entra mais).
+- [ ] Login só mostra e-mail, senha e "Esqueceu a senha? Fale com o administrador."
+- [ ] Admin cria conta em **Admin › Líderes › + Nova conta**; o campo Nova senha tem olhinho e Copiar; a janela "Conta criada" deixa copiar antes de fechar; o líder entra com essa senha.
+- [ ] **Redefinir senha** troca a senha de um líder; a nova funciona e a antiga não. A senha atual nunca aparece.
+- [ ] Líder não vê "Alterar senha" nem a aba Admin; pelo console, criar conta, redefinir, remover e trocar a própria senha são recusados pelo Supabase.
+- [ ] Admin remove um líder (a pessoa não entra mais).
 - [ ] E-mail com conta mas sem cadastro de líder vê "Acesso não liberado" e nenhum dado.
 
 **Calendário e eventos**
@@ -1199,7 +1244,7 @@ Visual e interno:
 - [ ] Cruz muda devagar de branco para azul-claro; nome Qhall branco.
 - [ ] PC: barra lateral sólida com item ativo em azul. Celular: mesmas opções no menu inferior.
 - [ ] Cabeçalho inteiro em azul-marinho sólido (#0D172B), igual à barra lateral, sem emenda perto da logo e com linha fina embaixo; perfil com borda suave e avatar azul (PC e celular).
-- [ ] Avatar com inicial e nome; menu com Alterar senha e Sair.
+- [ ] Avatar com inicial e nome; menu com Sair (e Alterar senha, só para administrador).
 - [ ] Calendário com Dom a Sáb, divisórias finas e data selecionada em quadrado arredondado.
 - [ ] Botões, menu do usuário e janelas de confirmação com vidro discreto e texto legível.
 - [ ] Com "reduzir movimento" ligado, nada se move (o fundo fica parado com as mesmas manchas).
@@ -1220,7 +1265,7 @@ Visual e interno:
 
 **Geral**
 
-- [ ] `sw.js` em `igreja-v8.6`; celular mostra a versão nova depois de fechar e abrir.
+- [ ] `sw.js` em `igreja-v8.8`; celular mostra a versão nova depois de fechar e abrir.
 - [ ] Telão, WhatsApp, Histórico e Materiais funcionam no celular.
 - [ ] Nenhum arquivo contém a chave `service_role` / `secret`.
 

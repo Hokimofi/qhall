@@ -686,6 +686,19 @@ details.anteriores > summary { font-family: var(--fonte-titulo); font-size: 1.05
 }
 .menu-acoes button:hover, .menu-acoes button:focus-visible { background: rgb(255 255 255 / .08); }
 
+/* Login: aviso no lugar de "Esqueci a senha" */
+.aviso-senha { text-align: center; margin: .85rem 0 0; }
+
+/* Campo "Nova senha": olhinho e Copiar ao lado */
+.senha-caixa, .campo > span.senha-caixa { display: flex; align-items: center; gap: .4rem; margin: 0 0 .3rem; font-size: 1rem; font-weight: 400; color: var(--texto); }
+.senha-caixa input { flex: 1; min-width: 0; font-variant-ligatures: none; letter-spacing: .02em; }
+.senha-caixa .senha-olho { flex: none; width: 44px; height: 44px; }
+.senha-caixa .senha-olho .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.senha-caixa .btn { flex: none; min-height: 44px; }
+.senha-caixa input[readonly] { background: rgb(6 11 22 / .35); }
+.lista-lideres .acoes-lider { flex: none; flex-wrap: nowrap; }
+@media (max-width: 480px) { .lista-lideres li { flex-wrap: wrap; } .lista-lideres .acoes-lider { width: 100%; justify-content: flex-end; } }
+
 /* Menu inferior com seis itens (admin) no celular */
 @media (max-width: 899px) {
   .abas a { font-size: .64rem; }

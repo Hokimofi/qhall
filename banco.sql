@@ -379,6 +379,33 @@ begin
 end;
 $$;
 
+-- Só o administrador troca senhas. Líder não troca a própria senha (nem pelo app, nem pela API):
+-- a trava abaixo recusa a troca quando ela vem do serviço de login do Supabase (supabase_auth_admin)
+-- para uma conta que não é de administrador. O "Redefinir senha" do admin passa por definir_senha_lider.
+create or replace function public.eh_admin_id(p_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.lideres where id = p_id and papel = 'admin');
+$$;
+revoke execute on function public.eh_admin_id(uuid) from public, anon, authenticated;
+grant usage on schema public to supabase_auth_admin;
+grant execute on function public.eh_admin_id(uuid) to supabase_auth_admin;
+
+create or replace function public.bloquear_troca_senha_lider()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.encrypted_password is distinct from old.encrypted_password
+     and current_user = 'supabase_auth_admin'
+     and not public.eh_admin_id(new.id) then
+    raise exception 'Só o administrador pode trocar senhas.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.bloquear_troca_senha_lider() from public, anon, authenticated;
+create trigger trg_bloquear_troca_senha_lider
+before update of encrypted_password on auth.users
+for each row execute function public.bloquear_troca_senha_lider();
+
 -- Admin remove um líder (apaga a conta de login; as escalas continuam).
 create or replace function public.remover_lider(p_id uuid)
 returns void language plpgsql security definer set search_path = '' as $$

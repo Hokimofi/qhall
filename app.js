@@ -22,6 +22,8 @@ const ORDEM_SEMANA = [1, 2, 3, 4, 5, 6, 0]; // segunda a domingo
 const ICONES = {
   telao: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/></svg>',
   conversa: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.7 7.1L4 19.8l1.2-4A8 8 0 1 1 20 11.5z"/></svg>',
+  olho: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  olhoFechado: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.2 3.9M6.6 7.6C4 9.3 2.5 12 2.5 12S6 18 12 18c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
 };
 const ANO_DESCONHECIDO = '1904'; // usado quando a data de nascimento não tem ano
 const FUNCOES_SUGERIDAS = ['Ministro', 'Vocal', 'Violão', 'Guitarra', 'Baixo', 'Teclado', 'Bateria', 'Som', 'Projeção', 'Transmissão', 'Câmera', 'Fotografia', 'Iluminação', 'Coreografia'];
@@ -252,6 +254,7 @@ function confirmar(msg, textoOk = 'Excluir', classeOk = 'btn perigo') {
 }
 
 function campoHTML(c, valor) {
+  if (c.tipo === 'senha') return campoSenhaHTML(c, ''); // nunca vem preenchido
   if (c.tipo === 'checkbox') {
     return `<label class="campo-check"><input type="checkbox" name="${c.nome}" value="1" ${valor ? 'checked' : ''}><span>${esc(c.rotulo)}</span></label>`;
   }
@@ -313,6 +316,7 @@ function abrirFormulario({ titulo, campos, valores = {}, aoSalvar, aoExcluir, ao
       </div>
     </form>`);
   const form = $('form', d);
+  ligarCamposSenha(form);
   const erro = $('.erro', form);
   const btn = $('[data-principal]', form);
   const btnMais = $('[data-mais]', form);
@@ -410,57 +414,38 @@ function telaSimples(html) {
   anima(app, { opacity: [0, 1], y: [8, 0] }, { duration: 0.3 });
 }
 
-function telaLogin(modo = 'entrar', mensagem = '') {
+// Login só por e-mail e senha. Não há recuperação por e-mail: quem esqueceu a senha
+// fala com o administrador, que define uma nova em Admin › Líderes.
+function telaLogin(_modo = 'entrar', mensagem = '') {
   telaSimples(`
     <section class="tela-login">
-      <h1>${modo === 'esqueci' ? 'Recuperar senha' : 'Entrar'}</h1>
-      <p class="suave">${modo === 'esqueci' ? 'Enviaremos um link para criar uma nova senha.' : 'Acesso dos líderes'}</p>
+      <h1>Entrar</h1>
+      <p class="suave">Acesso dos líderes</p>
       <div class="card">
         <form id="form-login">
           <label class="campo"><span>E-mail</span><input type="email" name="email" required autocomplete="email" inputmode="email"></label>
-          ${modo === 'entrar' ? '<label class="campo"><span>Senha</span><input type="password" name="senha" required autocomplete="current-password"></label>' : ''}
+          <label class="campo"><span>Senha</span><input type="password" name="senha" required autocomplete="current-password"></label>
           <p class="erro" ${mensagem ? '' : 'hidden'}>${esc(mensagem)}</p>
-          <button class="btn bloco" type="submit">${modo === 'entrar' ? 'Entrar' : 'Enviar link'}</button>
+          <button class="btn bloco" type="submit">Entrar</button>
         </form>
-        <div class="links-login" style="justify-content:center">
-          ${modo === 'entrar'
-            ? '<button class="btn-texto" type="button" data-modo="esqueci">Esqueci a senha</button>'
-            : '<button class="btn-texto" type="button" data-modo="entrar">← Voltar</button>'}
-        </div>
+        <p class="aviso-senha suave pequeno">Esqueceu a senha? Fale com o administrador.</p>
       </div>
     </section>`);
 
   const form = $('#form-login');
   const erro = $('.erro', form);
   const btn = $('[type=submit]', form);
-  const mostrarMsg = (msg, ehErro = true) => {
-    erro.textContent = msg;
-    erro.style.color = ehErro ? '' : 'var(--sucesso)';
-    erro.hidden = false;
-    if (ehErro) anima(erro, { x: [-6, 6, -4, 4, 0] }, { duration: 0.3 });
-  };
-
-  app.onclick = (e) => {
-    const m = e.target.closest('[data-modo]');
-    if (m) telaLogin(m.dataset.modo);
-  };
-
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = form.email.value.trim().toLowerCase();
     btn.disabled = true;
     erro.hidden = true;
     try {
-      if (modo === 'entrar') {
-        const { error } = await db.auth.signInWithPassword({ email, password: form.senha.value });
-        if (error) throw error;
-      } else {
-        const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: urlBase() + '?redefinir=1' });
-        if (error) throw error;
-        mostrarMsg('Se o e-mail estiver cadastrado, você vai receber um link em instantes.', false);
-      }
+      const { error } = await db.auth.signInWithPassword({ email: form.email.value.trim().toLowerCase(), password: form.senha.value });
+      if (error) throw error;
     } catch (err) {
-      mostrarMsg(traduzErro(err));
+      erro.textContent = traduzErro(err);
+      erro.hidden = false;
+      anima(erro, { x: [-6, 6, -4, 4, 0] }, { duration: 0.3 });
     } finally {
       btn.disabled = false;
     }
@@ -568,6 +553,7 @@ async function carregarPerfilAgora(sessao) {
   $('#usuario').hidden = false;
   document.body.classList.remove('sem-menu');
   $('#aba-admin').hidden = !eAdmin();
+  $('#btn-senha').hidden = !eAdmin(); // líder não troca a senha: fala com o administrador
   $('#aba-membros').hidden = !eAdmin();
   // Admin: "Equipes" (todas). Líder: "Minha equipe" (atalho direto para a área dele).
   const abaEquipe = $('#aba-equipe');
@@ -1943,22 +1929,32 @@ async function adminAcessos() {
 }
 
 // --- Líderes e convites ---
-// Líderes: o admin cadastra e-mail e senha inicial (passada em particular para a pessoa).
+// Líderes: o admin cria contas (nome, e-mail, senha inicial) e redefine senhas pelo app.
+// Tudo passa pelas funções do banco criar_lider e definir_senha_lider, que conferem no servidor
+// se quem chamou é administrador. Nenhuma chave privada no app.
 async function adminLideres() {
   const { data, error } = await db.from('lideres').select('*').order('nome');
   if (error) throw error;
   const lideres = data || [];
   const papel = (p) => (p === 'admin' ? 'Admin' : 'Líder');
+  const campoSenha = { nome: 'senha', rotulo: 'Nova senha', tipo: 'senha', obrigatorio: true, ajuda: 'Mínimo de 6 caracteres. Use o olhinho para conferir e Copiar para mandar no privado.' };
+  const validarSenha = (s) => {
+    if (!s || s.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+    if (s.length > 72) throw new Error('A senha pode ter no máximo 72 caracteres.');
+  };
 
   return {
     html: `
-      <div class="secao-topo"><h2>Líderes</h2><button class="btn peq" type="button" data-acao="novo-lider">+ Novo líder</button></div>
-      <p class="suave pequeno">Cadastre o e-mail e uma senha inicial e passe a senha para a pessoa em particular. Ela pode trocar depois em "Alterar senha", no menu com o nome dela (canto superior direito).</p>
-      <div class="card"><ul class="lista">${lideres.map((l) => `
+      <div class="secao-topo"><h2>Líderes</h2><button class="btn peq" type="button" data-acao="novo-lider">+ Nova conta</button></div>
+      <p class="suave pequeno">Crie a conta com e-mail e senha e passe a senha em particular. Se alguém esquecer, use <strong>Redefinir senha</strong>. A senha atual nunca é mostrada.</p>
+      <div class="card"><ul class="lista lista-lideres">${lideres.map((l) => `
         <li><div class="cresce"><strong>${esc(l.nome)}</strong>${l.id === estado.lider.id ? ' <span class="suave pequeno">(você)</span>' : ''}
           <div class="suave pequeno">${esc(l.email || '')}</div>
           <div class="linha"><span class="selo">${papel(l.papel)}</span>${l.area_id ? `<span class="selo cinza">${esc(nomeArea(l.area_id))}</span>` : ''}</div></div>
-          <button class="btn-icone" type="button" data-acao="editar-lider" data-id="${l.id}" aria-label="Editar">✎</button></li>`).join('')}</ul></div>`,
+          <span class="linha acoes-lider">
+            ${l.id !== estado.lider.id ? `<button class="btn peq secundario" type="button" data-acao="redefinir-senha" data-id="${l.id}">Redefinir senha</button>` : ''}
+            <button class="btn-icone" type="button" data-acao="editar-lider" data-id="${l.id}" aria-label="Editar ${esc(l.nome)}">✎</button>
+          </span></li>`).join('')}</ul></div>`,
     clique: async (b) => {
       const acao = b.dataset.acao;
       const camposBase = [
@@ -1967,43 +1963,61 @@ async function adminLideres() {
         { nome: 'area_id', rotulo: 'Ministério', tipo: 'select', numero: true, opcoes: opcoesAreas(), vazio: '— nenhum (só admin) —' },
       ];
       const validar = (d) => { if (d.papel === 'lider' && d.area_id == null) throw new Error('Escolha o ministério do líder.'); };
-      const validarSenha = (s) => { if (s != null && s.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.'); };
 
       if (acao === 'novo-lider') {
+        let criada = null;
         abrirFormulario({
-          titulo: 'Novo líder',
+          titulo: 'Nova conta',
           campos: [
             camposBase[0],
             { nome: 'email', rotulo: 'E-mail', tipo: 'email', obrigatorio: true, autocomplete: 'off', converter: (v) => v?.toLowerCase() },
-            { nome: 'senha', rotulo: 'Senha inicial (mínimo 6 caracteres)', obrigatorio: true, autocomplete: 'off', ajuda: 'Anote e passe para a pessoa em particular.' },
+            campoSenha,
             ...camposBase.slice(1),
           ],
           valores: { papel: 'lider' },
-          textoSalvar: 'Cadastrar',
-          avisoSalvo: 'Líder cadastrado ✓',
+          textoSalvar: 'Criar conta',
+          avisoSalvo: 'Conta criada ✓',
           aoSalvar: async (d) => {
             validar(d);
             validarSenha(d.senha);
             const { error } = await db.rpc('criar_lider', { p_email: d.email, p_senha: d.senha, p_nome: d.nome, p_area_id: d.area_id, p_papel: d.papel });
             if (error) throw error;
-            roteador(true);
+            criada = d;
           },
+        })._aoFechar.push(() => {
+          if (!criada) return;
+          roteador(true);
+          setTimeout(() => mostrarSenhaDefinida('Conta criada', criada.nome, criada.email, criada.senha), 50);
+        });
+      } else if (acao === 'redefinir-senha') {
+        const l = lideres.find((x) => x.id === b.dataset.id);
+        if (!l) return;
+        let senhaNova = null;
+        abrirFormulario({
+          titulo: 'Redefinir senha',
+          ajuda: `${l.nome} · ${l.email || ''}. A senha atual não é mostrada; digite uma nova.`,
+          campos: [campoSenha],
+          textoSalvar: 'Salvar nova senha',
+          avisoSalvo: 'Senha redefinida ✓',
+          aoSalvar: async (d) => {
+            validarSenha(d.senha);
+            const { error } = await db.rpc('definir_senha_lider', { p_id: l.id, p_senha: d.senha });
+            if (error) throw error;
+            senhaNova = d.senha;
+          },
+        })._aoFechar.push(() => {
+          if (!senhaNova) return;
+          setTimeout(() => mostrarSenhaDefinida('Senha redefinida', l.nome, l.email, senhaNova), 50);
         });
       } else if (acao === 'editar-lider') {
         const l = lideres.find((x) => x.id === b.dataset.id);
         abrirFormulario({
           titulo: 'Editar líder',
-          campos: [...camposBase, { nome: 'nova_senha', rotulo: 'Nova senha (deixe em branco para manter)', autocomplete: 'off' }],
+          campos: camposBase,
           valores: l,
-          aoSalvar: async (d) => {
-            const { nova_senha: novaSenha, ...dados } = d;
+          aoSalvar: async (dados) => {
             validar(dados);
-            validarSenha(novaSenha);
             await gravar('lideres', dados, l.id);
-            if (novaSenha) {
-              const { error } = await db.rpc('definir_senha_lider', { p_id: l.id, p_senha: novaSenha });
-              if (error) throw error;
-            }
             if (l.id === estado.lider.id) { estado.lider = null; carregarPerfil(estado.sessao); } else roteador(true);
           },
           aoExcluir: l.id === estado.lider.id ? null : async () => {
@@ -2314,7 +2328,10 @@ async function adminPermissoes() {
 }
 
 // Cada líder pode trocar a senha inicial que recebeu do admin.
+// Só o administrador troca a própria senha pelo app; líderes falam com o administrador
+// (o Supabase também recusa a troca feita pela conta de um líder).
 function abrirTrocarSenha() {
+  if (!eAdmin()) return;
   abrirFormulario({
     titulo: 'Alterar senha',
     ajuda: 'Escolha uma senha nova, com pelo menos 6 caracteres.',
@@ -3299,6 +3316,66 @@ async function desfazerPulo(eventoId, areaId) {
   if (error) { aviso(traduzErro(error), true); return; }
   aviso('Desfeito: a escala desta data voltou a ficar pendente.');
   roteador(true);
+}
+
+
+// Campo "Nova senha" com olhinho (mostra ou oculta só o que foi digitado nesta janela) e Copiar.
+// A senha atual de ninguém é lida nem exibida: o banco guarda só o hash.
+function campoSenhaHTML(c, valor = '', somenteLeitura = false) {
+  return `<label class="campo campo-senha"><span>${esc(c.rotulo)}</span>
+    <span class="senha-caixa">
+      <input type="password" name="${c.nome}" value="${esc(valor)}" ${c.obrigatorio ? 'required' : ''} ${somenteLeitura ? 'readonly' : ''}
+        minlength="6" maxlength="72" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button type="button" class="btn-icone senha-olho" data-olho aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">${ICONES.olho}</button>
+      <button type="button" class="btn peq secundario" data-copiar-senha>Copiar</button>
+    </span>
+    ${c.ajuda ? `<small class="suave pequeno">${esc(c.ajuda)}</small>` : ''}</label>`;
+}
+
+
+// Liga o olhinho e o Copiar dos campos de senha dentro de uma janela
+function ligarCamposSenha(raiz) {
+  raiz.addEventListener('click', async (e) => {
+    const olho = e.target.closest('[data-olho]');
+    const copiar = e.target.closest('[data-copiar-senha]');
+    if (!olho && !copiar) return;
+    e.preventDefault();
+    const input = (olho || copiar).closest('.senha-caixa').querySelector('input');
+    if (olho) {
+      const mostrar = input.type === 'password';
+      input.type = mostrar ? 'text' : 'password';
+      olho.setAttribute('aria-pressed', String(mostrar));
+      olho.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+      olho.title = mostrar ? 'Ocultar senha' : 'Mostrar senha';
+      olho.innerHTML = mostrar ? ICONES.olhoFechado : ICONES.olho;
+      return;
+    }
+    if (!input.value) { aviso('Digite a senha primeiro.', true); input.focus(); return; }
+    try {
+      await navigator.clipboard.writeText(input.value);
+    } catch {
+      const tipo = input.type;
+      input.type = 'text';
+      input.select();
+      document.execCommand('copy');
+      input.type = tipo;
+      input.setSelectionRange(0, 0);
+    }
+    aviso('Senha copiada ✓ Mande no privado.');
+  });
+}
+
+
+// Depois de criar a conta ou redefinir a senha: mostra a senha recém-digitada (oculta, com olhinho)
+// para copiar antes de fechar. Ao fechar, o campo é apagado e a senha não aparece de novo.
+function mostrarSenhaDefinida(titulo, nome, email, senha) {
+  const d = abrirJanela(titulo, `
+    <p style="margin-top:0"><strong>${esc(nome)}</strong><br><span class="suave">${esc(email || '')}</span></p>
+    ${campoSenhaHTML({ nome: 'senha_definida', rotulo: 'Senha definida agora' }, senha, true)}
+    <p class="suave pequeno">Copie e mande no privado. Ela não fica guardada no app e não vai aparecer de novo. Para trocar de novo, use "Redefinir senha" aqui em Líderes.</p>
+    <div class="acoes"><button type="button" class="btn" data-fechar>Fechar</button></div>`);
+  ligarCamposSenha(d);
+  d._aoFechar.push(() => { const i = $('input', d); if (i) i.value = ''; });
 }
 
 

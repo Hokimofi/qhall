@@ -1,7 +1,7 @@
 // Service worker simples: guarda os arquivos do app para abrir rápido e
 // funcionar como app instalado. Dados do Supabase nunca são guardados aqui.
 // Ao mudar os arquivos do app, troque a versão abaixo.
-const VERSAO = 'igreja-v8.6';
+const VERSAO = 'igreja-v8.8';
 const ARQUIVOS = ['./', 'index.html', 'app.js', 'estilo.css', 'manifest.json', 'icone-180.png', 'icone-192.png', 'icone-512.png'];
 
 self.addEventListener('install', (e) => {
